@@ -28,8 +28,16 @@ chains.json 里已有的 utxo / tron 条目，只重建 EVM 部分。
 
 之后要做的事
 ------------
-等自家 GitHub 仓库就绪后，把生成结果提交上去，客户端的远端清单端点指向它即可；
-也可以把 CURATED_CHAIN_IDS 扩充后重跑本脚本。
+⚠️ **内置资源现在由「拷贝已发布产物」来维护，不要再指望本脚本两个仓库各跑一遍能对上。**
+
+发布侧的权威产物是 `LotusWallet/assets` 的 `chains/chains.json`（由 `assets/tools/
+sync_chainlist.py` 生成）。内置资源必须与它**逐字节一致**，靠两个脚本各自抓 chainlist
+去碰运气是维持不住的（上游数据结构一变就会悄悄破掉，而且没有测试会变红）。
+
+所以：
+  - 日常对齐用 `python tools/sync_builtin_chains.py`（拷贝 + 逐字节断言），
+    `release.py` 发版时会自动调用它；
+  - 本脚本只在**发布侧仓库还不存在**、需要从零造一份初始清单时才有意义。
 """
 
 from __future__ import annotations

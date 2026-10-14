@@ -213,6 +213,26 @@ def refresh_contract_fixtures() -> None:
         raise SystemExit("同步契约夹具失败 —— 发布产物或客户端解析器可能已经对不上了")
 
 
+def refresh_builtin_chains() -> None:
+    """把内置链资源对齐成「本次发布会带上的那份远端清单」。
+
+    内置资源是三层清单里最底下那层（内置 < 远端 < 用户自定义），
+    它是新装用户的离线基线，所以必须等于**某一次真实发布过**的清单。
+
+    这条不变量以前是靠「两个脚本各自抓 chainlist、碰巧产出一样的字节」维持的，
+    没有任何测试盯着；上游一改数据结构就会悄悄破掉（本仓库真出过事）。
+    现在改成从发布产物**拷贝**，逐字节断言 —— 巧合换成结构。
+    """
+    script = REPO / "tools" / "sync_builtin_chains.py"
+    if not script.exists():
+        return
+    result = subprocess.run([sys.executable, str(script)], cwd=REPO)
+    if result.returncode != 0:
+        raise SystemExit(
+            "对齐内置链资源失败 —— 检查 repos/assets/chains/chains.json 是否已发布、是否可读"
+        )
+
+
 # ------------------------------------------------------------------ 产物清单
 def sha256_of(path: Path) -> str:
     digest = hashlib.sha256()
@@ -304,6 +324,7 @@ def main() -> int:
 
     entry = update_versions_json(version_name, version_code, target)
     refresh_contract_fixtures()
+    refresh_builtin_chains()
 
     size_mb = target.stat().st_size / 1048576
     print()
@@ -312,25 +333,23 @@ def main() -> int:
     print(f"签名证书 : {fingerprint}")
     print(f"已更新   : {VERSIONS_JSON}")
     print(f"已同步   : core/network/src/test/resources/contract/")
+    print(f"已对齐   : core/network/src/main/resources/chains.json")
 
     tag = f"v{version_name}"
     print()
-    print("后续发布步骤：")
-    print(f"  1. 提交版本号与 CHANGELOG：git add -A && git commit -m 'release: {tag}'")
-    print(f"  2. 打 tag：git tag -a {tag} -m 'LotusWallet {version_name}'")
-    print(f"  3. 推 tag：git push origin main {tag}")
-    print(f"  4. 上传安装包：")
-    print(f"       gh release create {tag} \\")
-    print(f"         '{target}' \\")
-    print(f"         --repo {OWNER_REPO} --title 'LotusWallet {version_name}' --notes-file CHANGELOG.md")
-    print(f"     并另传一份重命名为 {LATEST_ASSET} 的资产（提供「永远最新」直链）：")
-    print(f"       gh release upload {tag} '{target}' --repo {OWNER_REPO} --clobber")
-    print(f"  5. 推送 download 仓库的 versions.json / README / CHANGELOG：")
-    print(f"       python ../repos/publish.py download")
+    print("后续发布步骤（全部在本机做，不使用 GitHub 的 Actions / Pages）：")
+    print("  cd D:/work/LotusWallet/repos")
+    print("  export GITHUB_TOKEN=ghp_xxx")
+    print("  export PUBLISH_PROXY=http://127.0.0.1:8800    # 本机必须，否则会随机 400")
+    print("  python publish.py assets   --yes    # ① 先推资源，再打 tag")
+    print("  python publish.py download --yes    # ② 推 versions.json / README / CHANGELOG")
+    print(f"  python publish_release.py  --yes    # ③ 打 tag + 建 Release + 传两个 APK")
+    print("  python publish_source.py   --yes    # ④ 推源码")
+    print("  顺序不能换：③ 的 tag 指向当时的 main HEAD。")
 
     if args.push:
-        print("\n--push 暂未自动执行：需要本机可访问 github.com 且已配置推送凭据。")
-        print("请按上面步骤手动执行，或配置好凭据后重跑本脚本。")
+        print("\n--push 不会自动推送：上传逻辑统一在 `repos/` 下（token、代理、幂等重跑都在那里）。")
+        print("  按上面 ①～④ 手动执行即可；本脚本只负责「把包和清单在本机准备好」。")
 
     return 0
 

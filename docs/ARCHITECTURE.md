@@ -245,7 +245,7 @@ enum class Family { EVM, UTXO, TRON, ED25519, FILECOIN, CHIA }
 | `versionCode == major*10000+minor*100+patch` | 规则漂了则覆盖安装判定失效 |
 | `minSupportedVersionCode <= latest.versionCode` | 否则会把所有用户逼进永远无法满足的强制更新 |
 
-`--check` 模式（CI 里会跑）会在夹具与产物不一致时直接失败；
+`--check` 模式（提交发布产物前必须跑）会在夹具与产物不一致时直接失败；
 `release.py` 在更新 `versions.json` 之后会自动刷新夹具，所以这一步不需要人记着做。
 
 ### 9.4 地址派生的可验证性
@@ -273,16 +273,36 @@ Chia 的取舍：地址需要 BLS12-381 与标准 puzzle 的字节级常量，�
 并从创建钱包的可选链里过滤掉（`ChainConfig.supportsKeyDerivation`）。
 宁可少一个功能，也不要静默的错资产。
 
-### 9.3 CI
+### 9.3 验证与打包：全部在本机完成
 
-`.github/workflows/ci.yml`：推送 / PR 时跑「契约校验 → 全量单测 → Lint → Debug 构建 →
-Release 构建」。**Release 构建必须纳入** —— R8 混淆与资源压缩的问题只在 Release 变体暴露。
-另外它还检出另外两个仓库来喂契约校验，并每周定时跑一次（清单是外部数据，没人改代码也会漂）。
+**不用 CI，也不用 GitHub 的任何构建/部署能力。** GitHub 只承担两个角色：
+存放源码、分发 APK 与清单。所有"需要算力"的事都在开发机上跑完再上传 ——
+这个项目的构建配置（国内镜像优先、临时目录指向 D 盘）本来就是为了本机环境调的，
+搬到托管 runner 上还要额外做一层环境无关化，收益为零。
 
-`.github/workflows/release.yml`：打 `v*` tag 时构建已签名 APK，用 apksigner 与 aapt2
-**双重校验**（签名有效 + 包内版本号与 `version.properties` 逐字一致），然后创建**草稿** Release。
-有意不自动推送 `download` 仓库 —— 改 `versions.json` 等于立刻对所有用户生效，属于对外动作，
-留给人工确认。
+本机的验证与发布链路：
+
+| 步骤 | 命令 |
+| --- | --- |
+| 契约校验（夹具 vs 发布产物） | `python tools/sync_contract_fixtures.py --check` |
+| 全量单元测试 | `tools/build.sh testDebugUnitTest` |
+| Lint | `tools/build.sh :app:lintDebug` |
+| 构建并签名 + 生成 `versions.json` | `python tools/release.py` |
+| 上传两个仓库 + 建 Release | `python repos/publish.py …` / `publish_release.py` |
+
+**Release 构建必须纳入** —— R8 混淆与资源压缩的问题只在 Release 变体暴露。
+
+签名包用 apksigner 与 aapt2 **双重校验**（签名有效 + 包内版本号与 `version.properties`
+逐字一致）。发布动作本身是纯上传：`publish.py` 写两个仓库的文本文件、
+`publish_release.py` 建 tag 与 Release 并上传 APK。
+发版脚本**不自动改 `versions.json` 的对外可见性** —— 它等于立刻对所有用户生效，
+属于对外动作，留给人确认。
+
+> 曾经有过 `ci.yml` / `release.yml` / `sync-data.yml` 三个工作流，已按上述约定移除。
+> 移除时的副产品是两个真 bug：`gradle.properties` 里写死 `-Djava.io.tmpdir=D:/tmp`
+> （任何没有 D 盘的环境都起不来 Gradle 守护进程），以及 `release.py` 用
+> `Path.write_text` 写出 CRLF 的 `versions.json`（与 git 里 LF 的契约夹具对不上）。
+> 两者都已修复。
 
 ## 10. 里程碑
 
@@ -297,7 +317,7 @@ Release 构建」。**Release 构建必须纳入** —— R8 混淆与资源压�
 | M6 | DApp 市场（远端 JSON 清单）、设置、备份导出 | ✅ 已完成 |
 | M7 | 旧数据迁移工具（LitePal → Room） | ❌ 不做 —— 3.x 与 2.x 数据格式不延续，改为「旧版内导出、新版导入」 |
 | M8 | 打包、签名 | ✅ 已完成（v2+v3 签名，RSA 4096，约 4.2 MB） |
-| M9 | 工程化：CI、远端清单契约测试、发布前校验 | ✅ 已完成 |
+| M9 | 工程化：远端清单契约测试、发布前校验、本机发布链路 | ✅ 已完成 |
 | M10 | 非 EVM 链扩展（Solana / ICP / Monero / Filecoin / Chia）+ 链管理可编辑 + 市场折叠与 24 小时缓存 | ✅ 已完成（crypto 142 + alt 55 + network 75 用例） |
 | M11 | 真机验证（安装、解锁、扫码、各链余额与转账、折叠屏布局） | ⏳ **下一步** —— 当前唯一未覆盖的环节 |
 

@@ -97,9 +97,9 @@
 
 ### 工程
 
-- **CI**（`.github/workflows/`）：推送时跑契约校验 → 单测 → Lint → Debug/Release 构建
-  （R8 只在 Release 暴露问题，必须纳入）；打 tag 时构建已签名 APK、用 apksigner 与 aapt2
-  双重校验后创建**草稿** Release，对外发布仍留给人工确认。
+- **验证与打包全部在本机完成**：契约校验 → 单测 → Lint → Debug/Release 构建
+  （R8 只在 Release 暴露问题，必须纳入）；已签名 APK 用 apksigner 与 aapt2
+  双重校验后再上传。**不使用 GitHub Actions** —— GitHub 只承担存放与分发的角色。
 - 单元测试从 170 个增至 **214 个**（新增 44 个，集中在远端清单这条链路上）。
 
 ---

@@ -15,7 +15,8 @@
     python tools/sync_contract_fixtures.py            # 从仓库产物刷新夹具
     python tools/sync_contract_fixtures.py --check    # 只校验夹具是否与产物一致
 
-`--check` 适合放进 CI / 发版前检查：夹具过期或产物变得无法解析，都会在这里被拦下。
+`--check` 适合放进发版前检查与定期同步脚本：夹具过期或产物变得无法解析，
+都会在这里被拦下。
 """
 
 from __future__ import annotations
