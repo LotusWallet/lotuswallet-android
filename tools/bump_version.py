@@ -72,7 +72,10 @@ def write_version(v: dict[str, int]) -> None:
         text, n = re.subn(rf"(?m)^{key}\s*=\s*\d+\s*$", f"{key}={value}", text)
         if n != 1:
             raise SystemExit(f"在 version.properties 里找不到唯一的 {key}= 行（匹配到 {n} 处）")
-    VERSION_FILE.write_text(text, encoding="utf-8")
+    # 必须 write_bytes + 归一化 LF。write_text 在 Windows 上会写成 CRLF，
+    # 而仓库的 .gitattributes 声明了 eol=lf —— 提交进 git 的是 LF、工作区却被
+    # 写成 CRLF，结果 version.properties 会永远显示为「已修改」，把真正的改动淹没。
+    VERSION_FILE.write_bytes(text.replace("\r\n", "\n").encode("utf-8"))
 
 
 def names(v: dict[str, int]) -> tuple[str, int]:

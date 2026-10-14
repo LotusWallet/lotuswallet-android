@@ -258,8 +258,19 @@ def update_versions_json(version_name: str, version_code: int, apk: Path) -> dic
     doc.setdefault("legacy", [])
 
     DOWNLOAD_SRC.mkdir(parents=True, exist_ok=True)
-    VERSIONS_JSON.write_text(
-        json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    # 必须用 write_bytes 强制 LF，不能用 write_text。
+    #
+    # Path.write_text 走文本模式，在 Windows 上会把 "\n" 翻译成 "\r\n"，
+    # 于是这里的 versions.json 变成 CRLF，而 assets 侧的产物（build_market.py、
+    # sync_chainlist.py 都显式 write_bytes + replace("\r\n","\n")）是 LF。
+    # 后果不是"格式难看"，而是真会挂：契约夹具在 git 里按 .gitattributes 的
+    # eol=lf 存成 LF，CI 检出后拿 LF 夹具去比 CRLF 产物，报
+    #   「以下夹具与发布侧产物不一致：versions.json」
+    # 这个坑已经真实踩过一次（2026-10-14，源码仓库 CI 第 1 次运行）。
+    # 与 assets 侧保持同一套写法，别再改回去。
+    VERSIONS_JSON.write_bytes(
+        (json.dumps(doc, ensure_ascii=False, indent=2) + "\n")
+        .replace("\r\n", "\n").encode("utf-8")
     )
     return entry
 

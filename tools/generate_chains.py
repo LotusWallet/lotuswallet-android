@@ -268,7 +268,13 @@ def main() -> int:
         "version": existing.get("version", 1),
         "chains": keep + evm,
     }
-    OUTPUT.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    # 用 write_bytes 强制 LF：这个文件是「内置资源」，必须与
+    # LotusWallet/assets 里的 chains/chains.json（由 sync_chainlist.py 以 LF 写出）
+    # 逐字节一致。write_text 在 Windows 上会写成 CRLF，直接破坏该不变量。
+    OUTPUT.write_bytes(
+        (json.dumps(doc, ensure_ascii=False, indent=2) + "\n")
+        .replace("\r\n", "\n").encode("utf-8")
+    )
     print(f"已写入 {OUTPUT}（共 {len(doc['chains'])} 条链）")
     return 0
 
