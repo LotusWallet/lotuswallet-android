@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    自适应图标背景层：纯白。
+    旧版 LOGO（mipmap-xxxhdpi/icon_logo.png）本身就是「白色圆角卡片 + 品牌标记」，
+    白色背景层 + 前景标记 = 忠实还原原设计。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#FFFFFFFF" />
+</shape>

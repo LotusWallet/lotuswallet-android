@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      仅用于承载窗口属性。真正的配色与排版由 Compose 侧的 LotusTheme 决定，
+      因此这里刻意保持最小：没有 action bar、没有多余的装饰。
+
+      android:windowSoftInputMode 交给 Activity 的 manifest 声明（adjustResize），
+      以便配合 edge-to-edge 与 WindowInsets 正确处理键盘。
+    -->
+    <!--
+      窗口属性分成两层，是为了让 values-v27 只**追加**刘海屏相关属性而不用整体重写本文件。
+      Android 的资源覆盖是「整份 style 替换」而不是「逐条合并」：如果 v27 里再把
+      Theme.LotusWallet 写一遍，就得把所有 item 抄过去，日后往这里加一条属性会
+      在 API 27+ 上静默失效。用 Base 承接公共属性即可彻底避免这种漂移。
+    -->
+    <style name="Base.Theme.LotusWallet" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/lotus_window_background</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <style name="Theme.LotusWallet" parent="Base.Theme.LotusWallet" />
+
+    <!-- 冷启动画面：避免白屏，同时把品牌色先亮出来 -->
+    <style name="Theme.LotusWallet.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/lotus_splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.LotusWallet</item>
+    </style>
+
+</resources>

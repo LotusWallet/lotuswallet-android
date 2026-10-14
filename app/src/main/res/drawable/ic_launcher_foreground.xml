@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    自适应图标前景层：品牌标记（V 形双笔画 + 青色圆）。
+
+    由旧版 mipmap-xxxhdpi/icon_logo.png（512px）轮廓追踪矢量化而来，三层遮挡
+    顺序经与原 PNG 逐像素比对确认：右笔画（深藏青）在最底、青色圆居中
+    （圆心/半径由可见弧最小二乘拟合，残差 <1px）、左笔画（垂直渐变）在最顶层。
+
+    内容按 0.67 缩放置于 (256,256)：原图中标记宽度约占可见区域的 85%，
+    0.67 缩放后在自适应图标中保持相同相对大小，顶点落在 66dp 安全区内。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+
+    <!-- 右笔画（深藏青） -->
+    <path
+        android:fillColor="#FF23345C"
+        android:pathData="M304.2,333.4 L282.5,298.2 L294.5,286.8 L299.2,279.4 L303.2,268.7 L304.6,258.7 L302.6,243.3 L297.9,232.6 L286.8,219.5 L277.1,213.1 L284.5,199.7 L296.9,184.6 L308.3,179.3 L319.0,177.9 L400.7,177.9 L401.1,181.0 L326.0,313.6 L313.6,328.7 L304.2,333.4 Z" />
+
+    <!-- 青色圆 -->
+    <path
+        android:fillColor="#FF39D1FF"
+        android:pathData="M207.1,257.1 A48.6,48.6 0 1 1 304.4,257.1 A48.6,48.6 0 1 1 207.1,257.1 Z" />
+
+    <!-- 左笔画（蓝渐变，垂直方向） -->
+    <path android:pathData="M303.6,334.1 L210.4,334.1 L197.7,329.4 L190.0,321.7 L182.0,309.6 L108.9,179.0 L191.7,177.9 L202.4,179.3 L214.5,185.3 L222.2,193.7 L238.9,221.2 L301.2,327.0 L304.6,333.0 L303.6,334.1 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="256"
+                android:startY="177.9"
+                android:endX="256"
+                android:endY="334.1">
+                <item android:offset="0.0" android:color="#FF598AF3" />
+                <item android:offset="1.0" android:color="#FF204FEA" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

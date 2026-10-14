@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      android:windowLayoutInDisplayCutoutMode 是 API 27 才引入的属性。
+      minSdk 是 26，若直接写在 values/ 里，Lint 会报 NewApi 错误；
+      即使在 API 26 上多半只是被忽略，把它放进 values-v27 才是规范做法。
+
+      这里只做一件事：在 Base 之上追加刘海屏模式。公共窗口属性仍然只在
+      values/themes.xml 里维护一份，不会出现两份定义不同步的问题。
+    -->
+    <style name="Theme.LotusWallet" parent="Base.Theme.LotusWallet">
+        <!-- 允许内容延伸到刘海/挖孔区域，配合 Activity 的 enableEdgeToEdge() 使用 -->
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+
+</resources>

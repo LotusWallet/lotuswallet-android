@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    启动画面图标：品牌标记（V 形双笔画 + 青色圆），透明底（白底主题上使用）。
+
+    与 ic_launcher_foreground 同源（旧版 icon_logo.png 矢量化），缩放 0.72：
+    API 31+ 会把启动图标裁进圆形区域，标记最大顶点半径 246.7px，
+    0.72 缩放后为 177.6px < 195px（视口半径的 76%），任何蒙版下都不裁边。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="288dp"
+    android:height="288dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+
+    <!-- 右笔画（深藏青） -->
+    <path
+        android:fillColor="#FF23345C"
+        android:pathData="M307.8,339.2 L284.4,301.4 L297.4,289.1 L302.4,281.2 L306.8,269.7 L308.2,258.9 L306.0,242.3 L301.0,230.8 L289.1,216.8 L278.7,209.9 L286.6,195.5 L299.9,179.3 L312.2,173.6 L323.7,172.1 L411.5,172.1 L411.9,175.4 L331.2,317.9 L317.9,334.1 L307.8,339.2 Z" />
+
+    <!-- 青色圆 -->
+    <path
+        android:fillColor="#FF39D1FF"
+        android:pathData="M203.4,257.2 A52.3,52.3 0 1 1 308.0,257.2 A52.3,52.3 0 1 1 203.4,257.2 Z" />
+
+    <!-- 左笔画（蓝渐变，垂直方向） -->
+    <path android:pathData="M307.1,339.9 L207.0,339.9 L193.4,334.8 L185.1,326.6 L176.4,313.6 L98.0,173.2 L186.9,172.1 L198.4,173.6 L211.4,180.0 L219.6,189.0 L237.6,218.6 L304.6,332.3 L308.2,338.8 L307.1,339.9 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="256"
+                android:startY="172.1"
+                android:endX="256"
+                android:endY="339.9">
+                <item android:offset="0.0" android:color="#FF598AF3" />
+                <item android:offset="1.0" android:color="#FF204FEA" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

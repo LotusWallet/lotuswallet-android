@@ -1,0 +1,26 @@
+*.iml
+.gradle/
+.kotlin/
+/local.properties
+/.idea/
+.DS_Store
+# 注意：这里不能写成 /build。
+# 带斜杠前缀只锚定仓库根目录，而构建产物在 app/build、core/*/build、chain/*/build，
+# 全部不会被忽略 —— 本机 app/build 就有 440 MB，一旦提交上去很难清掉。
+build/
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+*.apk
+*.aab
+*.keystore
+!debug.keystore
+# 签名密钥口令（明文）。这几个文件绝不能被提交，泄漏等于发布者身份失守。
+*.jks
+keystore.properties
+/app/release/
+
+# JVM 崩溃日志
+hs_err_pid*.log
+replay_pid*.log

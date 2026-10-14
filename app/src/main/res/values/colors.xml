@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 窗口底色：与 Compose 侧 background 保持一致，避免启动瞬间闪色差 -->
+    <color name="lotus_window_background">#FFF2F4F5</color>
+    <color name="lotus_window_background_dark">#FF0A0C0D</color>
+
+    <!-- 启动画面底色：白色。旧版 LOGO 本身就是「白卡片 + 蓝色标记」，白底才不产生色差 -->
+    <color name="lotus_splash_background">#FFFFFFFF</color>
+</resources>

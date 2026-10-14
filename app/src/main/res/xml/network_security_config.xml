@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  网络安全配置。
+
+  结论：**全应用禁止明文 HTTP**。
+
+  为什么值得显式写出来（targetSdk 28+ 本来就默认禁止，但不该依赖默认值）：
+   1. 钱包里出网的每一处都是「可能影响资产判断」的地方 —— RPC 返回的余额、
+      手续费、nonce，Esplora 返回的 UTXO 集合，以及链/市场/版本清单。
+      任何一处被中间人改写，用户看到的就是假数据（甚至有假更新包）。
+   2. 端点在 chains.json 里是数据、不是代码，改一条配置就能把一个
+      `https://` 换成 `http://`。默认值只保护「没写 networkSecurityConfig」的情况，
+      写在这里等于把这条约束钉在客户端里，远端配置改不动它。
+   3. 本项目没有「连本地自建节点」的功能（链列表只读展示，不接收用户输入的地址），
+      因此禁掉明文不会误伤任何用户场景。
+
+  如果**将来**要支持用户填自己的局域网节点（http://192.168.x.x），
+  不要在这里开 `cleartextTrafficPermitted="true"` —— 那会把全世界都放开。
+  正确做法是加 <domain-config cleartextTrafficPermitted="true"> 只放行该地址，
+  或者干脆要求本地节点启用 https。
+-->
+<network-security-config>
+
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+</network-security-config>

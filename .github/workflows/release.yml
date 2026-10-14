@@ -1,0 +1,132 @@
+name: Release APK
+
+# 打 tag（v3.0.2 这种）时构建**已签名**的 release APK，验签、算 sha256，
+# 然后在本仓库建一个 Release 把产物挂上去。
+#
+# 有意**不**在这一步直接推送到 LotusWallet/download：
+# 那个仓库是分发给用户的入口，`versions.json` 一改所有客户端立刻能看到新版本。
+# 发布是「对外动作」，留给人工确认（本机 tools/release.py + repos/publish.py），
+# CI 只负责把「可发布的产物」准备好并留下校验信息。
+#
+# 需要配置的仓库 Secret：
+#   RELEASE_KEYSTORE_BASE64    release.jks 的 base64（bash: base64 -w0 lotuswallet-release.jks）
+#   RELEASE_KEYSTORE_PASSWORD  keystore 口令
+#   RELEASE_KEY_ALIAS          key 别名
+#   RELEASE_KEY_PASSWORD       key 口令
+#
+# ⚠️ 密钥口令泄露 = 别人可以冒充你发布「升级包」。本项目自带 keystore 的
+#    口令与 .jks 必须离线保管；CI 里用的这两份 Secret 只应存在于受保护分支。
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要发布的 tag（例如 v3.0.2）'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: 构建并发布签名 APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 安装 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: 配置 Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # ---------------------------------------------------------------- 版本一致性
+      # tag、version.properties、BuildConfig 三者必须说的是同一个版本，
+      # 否则会产出一个「tag 叫 3.0.2、包内版本却是 3.0.1」的包，用户装了不会被认为是新版。
+      - name: 校验 tag 与 version.properties 一致
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          MAJOR=$(grep -E '^version\.major=' version.properties | cut -d= -f2)
+          MINOR=$(grep -E '^version\.minor=' version.properties | cut -d= -f2)
+          PATCH=$(grep -E '^version\.patch=' version.properties | cut -d= -f2)
+          EXPECTED="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "tag=$TAG  version.properties=$EXPECTED"
+          if [ "$TAG" != "$EXPECTED" ]; then
+            echo "::error::tag（$TAG）与 version.properties（$EXPECTED）不一致。升级版本请用 tools/bump_version.py"
+            exit 1
+          fi
+          echo "VER_NAME=${MAJOR}.${MINOR}.${PATCH}" >> "$GITHUB_ENV"
+          echo "VER_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))" >> "$GITHUB_ENV"
+
+      # ---------------------------------------------------------------- 签名材料
+      - name: 还原签名密钥
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+          cat > keystore.properties <<EOF
+          storeFile=$RUNNER_TEMP/release.jks
+          storePassword=${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.RELEASE_KEY_ALIAS }}
+          keyPassword=${{ secrets.RELEASE_KEY_PASSWORD }}
+          EOF
+          echo "签名材料已就位（keystore.properties 与 .jks 都是临时文件，不会留在仓库里）"
+
+      - name: 构建 Release APK
+        run: ./gradlew :app:assembleRelease --console=plain
+
+      # ---------------------------------------------------------------- 校验产物
+      # 签名、版本号、包内清单 —— 这三项任一不对，装到用户手机上就是事故。
+      - name: 校验签名与版本号
+        run: |
+          set -euo pipefail
+          APK="$(find app/build/outputs/apk/release -name '*.apk' | head -1)"
+          echo "APK=$APK"
+          BUILD_TOOLS="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
+          "$BUILD_TOOLS/apksigner" verify --print-certs "$APK" | tee "$RUNNER_TEMP/certs.txt"
+          # apksigner verify 在签名有问题时会以非 0 退出，上面已被 set -e 拦住；
+          # 这里再确认「确实有签名」而不是空跑通过。
+          grep -q "Signer #1 certificate DN" "$RUNNER_TEMP/certs.txt"
+
+          AAPT2="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/aapt2"
+          BADGING="$("$AAPT2" dump badging "$APK" | head -1)"
+          echo "$BADGING"
+          echo "$BADGING" | grep -q "versionCode='${VER_CODE}'" || { echo "::error::versionCode 与 version.properties 不符"; exit 1; }
+          echo "$BADGING" | grep -q "versionName='${VER_NAME}'" || { echo "::error::versionName 与 version.properties 不符"; exit 1; }
+          echo "$APK" > "$RUNNER_TEMP/apk_path.txt"
+
+      - name: 计算 sha256 并整理资产名
+        run: |
+          set -euo pipefail
+          APK="$(cat "$RUNNER_TEMP/apk_path.txt")"
+          TARGET="LotusWallet-v${VER_NAME}.apk"
+          cp "$APK" "$RUNNER_TEMP/$TARGET"
+          # 「永远最新」直链需要一份固定名的副本：/releases/latest/download/LotusWallet.apk
+          cp "$APK" "$RUNNER_TEMP/LotusWallet.apk"
+          ( cd "$RUNNER_TEMP" && sha256sum "$TARGET" LotusWallet.apk > SHA256SUMS.txt && cat SHA256SUMS.txt )
+          echo "TARGET=$TARGET" >> "$GITHUB_ENV"
+
+      - name: 创建 Release（草稿）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          NOTES="$(awk '/^## /{n++} n==1' CHANGELOG.md || true)"
+          gh release create "$TAG" \
+            --repo "${{ github.repository }}" \
+            --title "LotusWallet $VER_NAME" \
+            --notes "${NOTES:-见 CHANGELOG.md}" \
+            --draft \
+            "$RUNNER_TEMP/$TARGET" "$RUNNER_TEMP/LotusWallet.apk" "$RUNNER_TEMP/SHA256SUMS.txt"
+          echo "草稿 Release 已创建。确认无误后手动发布，再按 PUSH-CHECKLIST.md 更新 download 仓库的 versions.json。"

@@ -1,0 +1,26 @@
+# 统一换行符策略。
+#
+# 为什么需要这个文件：本机是 Windows，PortableGit 的 system 配置里 core.autocrlf=true，
+# 而 CI（.github/workflows/ci.yml）跑在 ubuntu-latest 上，直接执行 ./gradlew。
+# 如果 gradlew 被以 CRLF 提交，Linux 上的 #!/bin/sh 会解析失败，CI 挂在一个
+# 看起来毫无头绪的 "cannot execute" 上。显式声明 eol=lf 可以绕开 autocrlf 的猜测。
+
+* text=auto eol=lf
+
+# Windows 批处理必须保持 CRLF
+*.bat text eol=crlf
+
+# 这些是二进制，绝不能被当成文本转换（否则 jar 会损坏）
+*.jar  binary
+*.apk  binary
+*.aab  binary
+*.jks  binary
+*.keystore binary
+*.png  binary
+*.jpg  binary
+*.webp binary
+*.ttf  binary
+*.otf  binary
+
+# 入口脚本明确按 LF 存
+gradlew text eol=lf

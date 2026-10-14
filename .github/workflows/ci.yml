@@ -1,0 +1,93 @@
+name: CI
+
+# 每次推送都验证三件事：
+#   1. 能否编译（Debug 与 Release/R8 两条路径都要，R8 专属问题只在 Release 暴露）
+#   2. 单元测试是否全绿（含**跨仓库契约**：用另外两个仓库里真实的清单喂给客户端解析器）
+#   3. Lint 是否没有 error
+#
+# 为什么契约那一步要费力把别的仓库也检出：链清单 / 市场清单 / 版本清单是在
+# `LotusWallet/assets`、`LotusWallet/download` 生成的，解析却在这里。
+# 两侧对不上时客户端**静默失效**（链拉不到、市场空白、永远提示已是最新），
+# 真机几乎复现不了。所以宁可多检出两个仓库，也要在每次推送时把这条边界焊住。
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  # 另外两个仓库改了清单时，可以从那边 dispatch 过来重新验证
+  repository_dispatch:
+    types: [ manifest-updated ]
+  # 每周一早上跑一次：清单是外部数据，没人改代码也可能漂
+  schedule:
+    - cron: '0 1 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: 编译 / 测试 / Lint / 契约
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: 检出客户端源码
+        uses: actions/checkout@v4
+
+      # ---- 发布侧的真实产物（契约校验的比对基准）----
+      - name: 检出资源仓库 LotusWallet/assets
+        uses: actions/checkout@v4
+        with:
+          repository: LotusWallet/assets
+          path: build/contract-repos/assets
+          # 只需要清单文件，不必拉全量历史
+          fetch-depth: 1
+
+      - name: 检出分发仓库 LotusWallet/download
+        uses: actions/checkout@v4
+        with:
+          repository: LotusWallet/download
+          path: build/contract-repos/download-src
+          fetch-depth: 1
+
+      - name: 安装 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: 配置 Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 契约夹具必须与发布产物一致
+        run: python3 tools/sync_contract_fixtures.py --check --repos build/contract-repos
+
+      - name: 单元测试（全部模块）
+        run: ./gradlew testDebugUnitTest --console=plain
+
+      - name: Lint（只允许 warning，不允许 error）
+        run: ./gradlew :app:lintDebug --console=plain
+
+      - name: 构建 Debug
+        run: ./gradlew :app:assembleDebug --console=plain
+
+      # 未配置签名时 release 变体产出未签名包 —— 这里要的只是把 R8/资源压缩跑一遍，
+      # 混淆规则出问题属于「只在 Release 炸」的那一类，必须纳入 CI。
+      - name: 构建 Release（含 R8 与资源压缩）
+        run: ./gradlew :app:assembleRelease --console=plain
+
+      - name: 上传测试与 Lint 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            **/build/reports/tests/**
+            **/build/reports/lint-results-*.html
