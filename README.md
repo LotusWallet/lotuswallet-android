@@ -110,4 +110,23 @@ export ANDROID_HOME="<android-sdk 路径>"
 
 ## 许可
 
-待定（正式对外公开前确定）。
+**GNU General Public License v3.0**（GPL-3.0），全文见根目录 [`LICENSE`](LICENSE)。
+
+```
+Copyright (C) 2026 LotusWallet
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+```
+
+选 GPL-3.0 而不是 MIT 的原因很直接：这是一个非托管的钱包，代码里全是
+「错了不会抛异常、只会生成没人能解锁的地址」的逻辑。允许闭源分叉意味着
+有人可以拿走这些实现、改坏、再以成品形态发出去，而使用者无从核对 ——
+copyleft 至少保证「你拿到的二进制背后有一份必须公开的源码」。
